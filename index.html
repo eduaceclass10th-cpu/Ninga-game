@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Samurai Squad - 50 Bomb Skins & Live Preview</title>
+    <style>
+        body {
+            margin: 0; padding: 0; background: #0c0c0e;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; color: white; font-family: 'Segoe UI', Arial, sans-serif;
+            overflow: hidden; user-select: none; -webkit-user-select: none;
+        }
+        
+        #gameContainer {
+            position: relative; width: 100vw; max-width: 480px; height: 100vh; max-height: 820px;
+            background: #222; border: 4px solid #ffd700; border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8); overflow: hidden;
+        }
+
+        canvas { display: block; width: 100%; height: 100%; background: #1e1918; }
+        
+        /* HOME SCREEN */
+        #homePageScreen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, #3a221d 0%, #0b0b0d 100%);
+            z-index: 500; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; padding: 20px; box-sizing: border-box; text-align: center;
+        }
+        
+        .game-title { font-size: 36px; font-weight: 900; color: #ff4757; margin-bottom: 5px; text-shadow: 0 0 20px rgba(255,71,87,0.6); letter-spacing: 1px; }
+        .game-subtitle { font-size: 12px; color: #ffd700; margin-bottom: 40px; font-weight: bold; letter-spacing: 2px; }
+        .menu-btn { width: 85%; max-width: 280px; padding: 16px; font-size: 18px; font-weight: bold; border-radius: 50px; border: none; cursor: pointer; margin-bottom: 18px; transition: 0.2s; }
+        .play-btn { background: linear-gradient(135deg, #ff4757 0%, #b33939 100%); color: white; }
+        .shop-launch-btn { background: linear-gradient(135deg, #ffd700 0%, #ff9f43 100%); color: black; }
+
+        /* ADVANCED STORE OVERLAY WITH PREVIEW PANEL */
+        #shopOverlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15,15,18,0.99); z-index: 1000; display: none;
+            flex-direction: column; padding: 20px; box-sizing: border-box;
+        }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .close-btn { background: #ff4757; color: white; border: none; padding: 8px 16px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        
+        /* LIVE PREVIEW BOX */
+        #skinPreviewPanel {
+            width: 100%; height: 130px; background: #251f1e; border: 2px dashed #ffd700;
+            border-radius: 14px; margin-bottom: 15px; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; position: relative;
+        }
+        #previewCanvas { width: 80px; height: 80px; }
+        .preview-label { font-size: 11px; color: #ffd700; letter-spacing: 1px; font-weight: bold; margin-top: 2px; }
+
+        .items-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; overflow-y: auto; flex-grow: 1; padding-bottom: 10px; }
+        .item-card { background: #1d1817; border: 2px solid #332a28; border-radius: 14px; padding: 10px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; cursor: pointer; }
+        .item-card.selected-card { border-color: #38ef7d; background: #222a25; }
+        .item-card.active-item { border-color: #ffd700; background: #2b231f; }
+        
+        /* CARD CANVAS MINI PREVIEW */
+        .mini-render-holder { height: 45px; display: flex; align-items: center; justify-content: center; }
+
+        .action-btn { border: none; padding: 8px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%; }
+        .buy-btn { background: #ffd700; color: #000; }
+        .equip-btn { background: #00d2d3; color: white; }
+        .equipped-txt { background: #2ed573; color: white; cursor: default; }
+
+        /* HUD */
+        #topDashboard { position: absolute; top: 15px; left: 15px; right: 15px; display: none; justify-content: space-between; align-items: center; z-index: 99; }
+        .hud-box { background: rgba(0,0,0,0.75); padding: 8px 14px; border-radius: 10px; border: 1px solid #ffd700; font-weight: bold; }
+
+        /* GAME OVER */
+        #gameOverScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10,10,12,0.95); z-index: 600; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        .go-btn { width: 190px; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 10px; border: none; margin-top: 14px; cursor: pointer; }
+        .replay-btn { background: #2ed573; color: white; }
+        .back-home-btn { background: #444; color: white; }
+    </style>
+</head>
+<body>
+
+    <div id="gameContainer">
+        <div id="homePageScreen">
+            <div class="game-title">SAMURAI SQUAD</div>
+            <div class="game-subtitle">50 PREMIUM SKINS ENGINE</div>
+            <div style="color: #ffd700; font-size: 18px; margin-bottom: 25px; font-weight: bold;">🪙 Vault: <span id="homeCoins">0</span></div>
+            <button class="menu-btn play-btn" id="startMatchBtn">⚔️ START MATCH</button>
+            <button class="menu-btn shop-launch-btn" id="openShopBtn">🏯 BOMB VAULT (50 SKINS)</button>
+        </div>
+
+        <div id="topDashboard">
+            <div class="hud-box">SCORE: <span id="scoreVal" style="color:#ffd700;">0</span></div>
+            <div class="hud-box" id="livesDisplay">❤️❤️❤️</div>
+        </div>
+
+        <div id="shopOverlay">
+            <div class="panel-header">
+                <h3 style="margin:0; color:#ffd700;">🏯 Bomb Weapon Store</h3>
+                <button class="close-btn" id="closeShopBtn">X</button>
+            </div>
+            
+            <div id="skinPreviewPanel">
+                <canvas id="previewCanvas" width="80" height="80"></canvas>
+                <div class="preview-label" id="previewSkinName">SELECT A SKIN TO INSPECT</div>
+            </div>
+
+            <div style="color:#ffd700; font-weight:bold; margin-bottom:10px; font-size:14px;">Wallet Balance: 🪙 <span id="shopCoins">0</span></div>
+            <div class="items-grid" id="shopItemsGrid"></div>
+        </div>
+
+        <div id="gameOverScreen">
+            <h2 id="goHeadline" style="color:#ff4757; font-size:36px; margin-bottom:5px;">COMBAT OVER</h2>
+            <p style="font-size:22px; margin:5px 0;">Score achieved: <span id="goFinalScore" style="color:#ffd700;">0</span></p>
+            <button class="go-btn replay-btn" id="replayMatchBtn">🔄 FIGHT AGAIN</button>
+            <button class="go-btn back-home-btn" id="exitToHomeBtn">🏠 EXIT TO MAIN</button>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    
+    const previewCanvas = document.getElementById("previewCanvas");
+    const pCtx = previewCanvas.getContext("2d");
+
+    // UI Links
+    const homePageScreen = document.getElementById("homePageScreen");
+    const shopOverlay = document.getElementById("shopOverlay");
+    const gameOverScreen = document.getElementById("gameOverScreen");
+    const topDashboard = document.getElementById("topDashboard");
+    const shopItemsGrid = document.getElementById("shopItemsGrid");
+    const previewSkinName = document.getElementById("previewSkinName");
+    
+    canvas.width = 480; canvas.height = 820;
+
+    // Local Storage State Memory
+    let playerWallet = parseInt(localStorage.getItem("s50_wallet")) || 75000; 
+    let purchasedBombs = JSON.parse(localStorage.getItem("s50_purchased")) || ["Bomb_0"];
+    let equippedBombId = localStorage.getItem("s50_equipped") || "Bomb_0";
+    let selectedPreviewId = equippedBombId;
+
+    let score = 0; let lives = 3; let isMatchActive = false;
+    let objects = []; let bladeTrail = []; let isSlicing = false;
+    let currentX = 0, currentY = 0; let spawnTimer = 0; let previewRotation = 0;
+    let shopPreviewAnimId = null; // FIX: Track animation frame for cleanup
+
+    // 🔥 GENERATE 50 EXCLUSIVE UNIQUE VECTOR BOMB SKINS (No Emojis!)
+    const bombSkinsDatabase = [];
+    const colorPalettes = [
+        { fill: "#2c3e50", core: "#e74c3c", line: "#f1c40f" },
+        { fill: "#111111", core: "#00ff00", line: "#ffffff" },
+        { fill: "#7f8c8d", core: "#9b59b6", line: "#3498db" },
+        { fill: "#d35400", core: "#f39c12", line: "#fff" },
+        { fill: "#27ae60", core: "#2ecc71", line: "#f1c40f" },
+        { fill: "#8e44ad", core: "#fd79a8", line: "#74b9ff" },
+        { fill: "#ff7675", core: "#d63031", line: "#ffeaa7" },
+        { fill: "#00cec9", core: "#0984e3", line: "#ffffff" }
+    ];
+
+    for (let i = 0; i < 50; i++) {
+        let palette = colorPalettes[i % colorPalettes.length];
+        bombSkinsDatabase.push({
+            id: `Bomb_${i}`,
+            name: `Omega Mine Prototype-${i+1}`,
+            cost: i === 0 ? 0 : 400 + (i * 150),
+            fillColor: palette.fill,
+            coreColor: palette.core,
+            lineColor: palette.line,
+            spikeCount: 4 + (i % 5),
+            ringRadius: 5 + (i % 6)
+        });
+    }
+
+    // OPTIMIZATION: Cache current equipped skin
+    let cachedEquippedSkin = bombSkinsDatabase[0];
+
+    function updateStorageData() {
+        document.getElementById("homeCoins").innerText = playerWallet;
+        document.getElementById("shopCoins").innerText = playerWallet;
+        localStorage.setItem("s50_wallet", playerWallet);
+        localStorage.setItem("s50_purchased", JSON.stringify(purchasedBombs));
+        localStorage.setItem("s50_equipped", equippedBombId);
+        
+        // FIX: Update cached skin when equipped bomb changes
+        cachedEquippedSkin = bombSkinsDatabase.find(b => b.id === equippedBombId) || bombSkinsDatabase[0];
+    }
+
+    // UTILITY: Draws custom vector bombs (optimized with fewer state changes)
+    function drawVectorBombMesh(context, x, y, radius, angle, skin) {
+        context.save();
+        context.translate(x, y);
+        context.rotate(angle);
+
+        // 1. Draw outer tactical spikes
+        context.strokeStyle = skin.lineColor;
+        context.lineWidth = 3;
+        const spikeRotation = (Math.PI * 2) / skin.spikeCount;
+        for (let j = 0; j < skin.spikeCount; j++) {
+            context.rotate(spikeRotation);
+            context.beginPath();
+            context.moveTo(0, -radius);
+            context.lineTo(0, -radius - 8);
+            context.stroke();
+        }
+
+        // 2. Draw Main Outer Shell
+        context.beginPath();
+        context.arc(0, 0, radius, 0, Math.PI * 2);
+        context.fillStyle = skin.fillColor;
+        context.fill();
+        context.lineWidth = 2.5;
+        context.strokeStyle = "#ffffff";
+        context.stroke();
+
+        // 3. Draw Inner Power Core
+        context.beginPath();
+        context.arc(0, 0, skin.ringRadius + 5, 0, Math.PI * 2);
+        context.fillStyle = skin.coreColor;
+        context.fill();
+
+        // 4. Draw Center Fusion Dot
+        context.beginPath();
+        context.arc(0, 0, 4, 0, Math.PI * 2);
+        context.fillStyle = skin.lineColor;
+        context.fill();
+
+        context.restore();
+    }
+
+    // OPTIMIZATION: Throttle preview updates
+    function updateStorePreviewSystem() {
+        pCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+        let selectedSkin = bombSkinsDatabase.find(b => b.id === selectedPreviewId);
+        
+        if (selectedSkin) {
+            previewRotation += 0.025;
+            drawVectorBombMesh(pCtx, previewCanvas.width / 2, previewCanvas.height / 2, 22, previewRotation, selectedSkin);
+            
+            let isOwned = purchasedBombs.includes(selectedSkin.id);
+            let isEquipped = equippedBombId === selectedSkin.id;
+            let statusSuffix = isEquipped ? " [ACTIVE]" : (isOwned ? " [OWNED - EQUIP NOW]" : " [LOCKED]");
+            previewSkinName.innerText = selectedSkin.name + statusSuffix;
+            previewSkinName.style.color = isEquipped ? "#2ed573" : (isOwned ? "#00d2d3" : "#ffd700");
+        }
+        
+        // FIX: Only continue animation if shop is actually open
+        if (shopOverlay.style.display === "flex") {
+            shopPreviewAnimId = requestAnimationFrame(updateStorePreviewSystem);
+        }
+    }
+
+    function buildShopGridDom() {
+        shopItemsGrid.innerHTML = "";
+        
+        bombSkinsDatabase.forEach(item => {
+            let isOwned = purchasedBombs.includes(item.id);
+            let isEquipped = equippedBombId === item.id;
+            let isInspected = selectedPreviewId === item.id;
+            
+            const card = document.createElement("div");
+            card.className = `item-card ${isEquipped ? 'active-item' : ''} ${isInspected ? 'selected-card' : ''}`;
+            
+            card.addEventListener("click", (e) => {
+                if(e.target.tagName !== 'BUTTON') {
+                    selectedPreviewId = item.id;
+                    buildShopGridDom();
+                }
+            });
+
+            let actionBtnHtml = "";
+            if (!isOwned) {
+                actionBtnHtml = `<button class="action-btn buy-btn" onclick="triggerPurchase('${item.id}', ${item.cost})">🪙 ${item.cost}</button>`;
+            } else if (!isEquipped) {
+                actionBtnHtml = `<button class="action-btn equip-btn" onclick="triggerEquip('${item.id}')">EQUIP SKIN</button>`;
+            } else {
+                actionBtnHtml = `<button class="action-btn equipped-txt">EQUIPPED</button>`;
+            }
+
+            card.innerHTML = `
+                <div style="font-size:11px; font-weight:bold; color:#aaa; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.name}</div>
+                <div style="font-size:10px; color:${item.coreColor}; font-weight:bold;">Radius Core ${item.ringRadius}</div>
+                ${actionBtnHtml}
+            `;
+            shopItemsGrid.appendChild(card);
+        });
+    }
+
+    window.triggerPurchase = function(id, cost) {
+        if (playerWallet >= cost) {
+            playerWallet -= cost;
+            purchasedBombs.push(id);
+            selectedPreviewId = id;
+            updateStorageData();
+            buildShopGridDom();
+        }
+    };
+
+    window.triggerEquip = function(id) {
+        equippedBombId = id;
+        selectedPreviewId = id;
+        updateStorageData();
+        buildShopGridDom();
+    };
+
+    function startMatch() {
+        score = 0; lives = 3; objects = []; bladeTrail = []; spawnTimer = 0;
+        document.getElementById("scoreVal").innerText = score;
+        document.getElementById("livesDisplay").innerText = "❤️❤️❤️";
+        homePageScreen.style.display = "none"; gameOverScreen.style.display = "none";
+        topDashboard.style.display = "flex"; isMatchActive = true;
+    }
+
+    function spawnObject() {
+        if (!isMatchActive) return;
+        let startX = Math.random() * (canvas.width - 120) + 60;
+        
+        // FIX: Use cached equipped skin instead of searching every time
+        if (Math.random() < 0.35) {
+            objects.push({
+                x: startX, y: canvas.height + 30,
+                vx: (startX > canvas.width/2 ? -1.4 : 1.4) * (Math.random() * 1.1 + 0.5),
+                vy: -(Math.random() * 3 + 14),
+                radius: 22, sliced: false, isBomb: true, rotation: 0,
+                rotSpeed: (Math.random() > 0.5 ? 0.04 : -0.04),
+                skinDataConfig: cachedEquippedSkin
+            });
+        } else {
+            let targetColors = ["#ea2027", "#ffb142", "#10ac84"];
+            objects.push({
+                x: startX, y: canvas.height + 30,
+                vx: (startX > canvas.width/2 ? -1.5 : 1.5) * (Math.random() * 1.2 + 0.5),
+                vy: -(Math.random() * 3 + 15),
+                radius: 24, sliced: false, isBomb: false, rotation: 0,
+                rotSpeed: 0.02, color: targetColors[Math.floor(Math.random() * targetColors.length)]
+            });
+        }
+    }
+
+    // OPTIMIZATION: Spatial-aware collision check
+    function checkSlices() {
+        if (!isSlicing || objects.length === 0) return;
+        
+        const sliceRadius = 18;
+        const hitDistance = sliceRadius * sliceRadius; // Squared distance for faster comparison
+        
+        for (let i = objects.length - 1; i >= 0; i--) {
+            let obj = objects[i];
+            if (obj.sliced) continue;
+            
+            let dx = obj.x - currentX;
+            let dy = obj.y - currentY;
+            let distSq = dx * dx + dy * dy;
+            let collisionDistSq = (obj.radius + sliceRadius) * (obj.radius + sliceRadius);
+            
+            if (distSq < collisionDistSq) {
+                obj.sliced = true;
+                if (obj.isBomb) {
+                    isMatchActive = false;
+                    topDashboard.style.display = "none";
+                    document.getElementById("goHeadline").innerText = "💥 OPERATION FAILED";
+                    document.getElementById("goFinalScore").innerText = score;
+                    gameOverScreen.style.display = "flex";
+                } else {
+                    score += 10; 
+                    playerWallet += 15;
+                    document.getElementById("scoreVal").innerText = score;
+                    updateStorageData();
+                }
+            }
+        }
+    }
+
+    // SYSTEM GAME LOOP (Optimized)
+    function runCoreEngineLoop() {
+        ctx.fillStyle = "#1e1918";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (isMatchActive) {
+            spawnTimer++;
+            if (spawnTimer >= 38) {
+                spawnObject();
+                spawnTimer = 0;
+            }
+        }
+
+        // Draw and update simulation entities
+        for (let i = objects.length - 1; i >= 0; i--) {
+            let obj = objects[i];
+            obj.vy += 0.23;
+            obj.x += obj.vx;
+            obj.y += obj.vy;
+            obj.rotation += obj.rotSpeed;
+
+            if (!obj.sliced) {
+                if (obj.isBomb) {
+                    drawVectorBombMesh(ctx, obj.x, obj.y, obj.radius, obj.rotation, obj.skinDataConfig);
+                } else {
+                    // Fruit Mesh Vector
+                    ctx.beginPath();
+                    ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = obj.color;
+                    ctx.fill();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = "#fff";
+                    ctx.stroke();
+                }
+
+                // FIX: Properly remove objects that fall off screen
+                if (obj.y > canvas.height + 60 && obj.vy > 0) {
+                    objects.splice(i, 1);
+                    if (isMatchActive && !obj.isBomb) {
+                        lives--;
+                        // FIX: Better lives display (no empty state)
+                        document.getElementById("livesDisplay").innerText = lives > 0 ? "❤️".repeat(lives) : "NO LIVES";
+                        if (lives <= 0) {
+                            isMatchActive = false;
+                            topDashboard.style.display = "none";
+                            document.getElementById("goHeadline").innerText = "MATCH CONCLUDED";
+                            document.getElementById("goFinalScore").innerText = score;
+                            gameOverScreen.style.display = "flex";
+                        }
+                    }
+                }
+            } else {
+                // Sliced Fragment Dispersion Engine
+                ctx.beginPath();
+                ctx.arc(obj.x - 16, obj.y + 5, obj.radius / 1.3, 0, Math.PI * 2);
+                ctx.fillStyle = obj.isBomb ? obj.skinDataConfig.fillColor : obj.color;
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(obj.x + 16, obj.y - 5, obj.radius / 1.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (obj.y > canvas.height + 100) {
+                    objects.splice(i, 1);
+                }
+            }
+        }
+
+        // Plasma Tracking Blade Line Render
+        if (isSlicing && bladeTrail.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(bladeTrail[0].x, bladeTrail[0].y);
+            for (let i = 1; i < bladeTrail.length; i++) {
+                ctx.lineTo(bladeTrail[i].x, bladeTrail[i].y);
+            }
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.lineWidth = 7;
+            ctx.strokeStyle = "#00ffff";
+            ctx.stroke();
+        }
+
+        requestAnimationFrame(runCoreEngineLoop);
+    }
+
+    // Input Coordinate Vector Translation
+    function getEventCanvasCoords(e) {
+        let box = canvas.getBoundingClientRect();
+        let cX = e.touches ? e.touches[0].clientX : e.clientX;
+        let cY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: (cX - box.left) * (canvas.width / box.width),
+            y: (cY - box.top) * (canvas.height / box.height)
+        };
+    }
+
+    function initiateSliceAction(e) {
+        if (!isMatchActive) return;
+        isSlicing = true;
+        let c = getEventCanvasCoords(e);
+        currentX = c.x;
+        currentY = c.y;
+        bladeTrail = [{ x: c.x, y: c.y }];
+    }
+
+    function trackingSliceAction(e) {
+        if (!isSlicing || !isMatchActive) return;
+        let c = getEventCanvasCoords(e);
+        currentX = c.x;
+        currentY = c.y;
+        bladeTrail.push({ x: c.x, y: c.y });
+        if (bladeTrail.length > 7) bladeTrail.shift();
+        checkSlices();
+    }
+
+    // FIX: Use non-passive listeners to prevent scroll issues
+    window.addEventListener("mousedown", initiateSliceAction);
+    window.addEventListener("mousemove", trackingSliceAction);
+    window.addEventListener("mouseup", () => { isSlicing = false; bladeTrail = []; });
+    window.addEventListener("touchstart", initiateSliceAction, false);
+    window.addEventListener("touchmove", trackingSliceAction, false);
+    window.addEventListener("touchend", () => { isSlicing = false; bladeTrail = []; });
+
+    // Open Shop UI
+    document.getElementById("openShopBtn").addEventListener("click", () => {
+        shopOverlay.style.display = "flex";
+        selectedPreviewId = equippedBombId;
+        buildShopGridDom();
+        updateStorePreviewSystem();
+    });
+
+    // FIX: Properly cleanup animation when shop closes
+    document.getElementById("closeShopBtn").addEventListener("click", () => {
+        shopOverlay.style.display = "none";
+        if (shopPreviewAnimId) {
+            cancelAnimationFrame(shopPreviewAnimId);
+            shopPreviewAnimId = null;
+        }
+    });
+
+    document.getElementById("startMatchBtn").addEventListener("click", startMatch);
+    document.getElementById("replayMatchBtn").addEventListener("click", startMatch);
+    document.getElementById("exitToHomeBtn").addEventListener("click", () => {
+        gameOverScreen.style.display = "none";
+        homePageScreen.style.display = "flex";
+    });
+
+    // Startup Init
+    updateStorageData();
+    runCoreEngineLoop();
+</script>
+</body>
+</html>
