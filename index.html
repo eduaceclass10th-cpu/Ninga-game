@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Samurai Squad - 50 Bomb Skins & Live Preview</title>
+    <title>Samurai Squad - Ultimate Fruit & Bomb Fix</title>
     <style>
         body {
             margin: 0; padding: 0; background: #0c0c0e;
@@ -56,9 +56,6 @@
         .item-card { background: #1d1817; border: 2px solid #332a28; border-radius: 14px; padding: 10px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; cursor: pointer; }
         .item-card.selected-card { border-color: #38ef7d; background: #222a25; }
         .item-card.active-item { border-color: #ffd700; background: #2b231f; }
-        
-        /* CARD CANVAS MINI PREVIEW */
-        .mini-render-holder { height: 45px; display: flex; align-items: center; justify-content: center; }
 
         .action-btn { border: none; padding: 8px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%; }
         .buy-btn { background: #ffd700; color: #000; }
@@ -81,7 +78,7 @@
     <div id="gameContainer">
         <div id="homePageScreen">
             <div class="game-title">SAMURAI SQUAD</div>
-            <div class="game-subtitle">50 PREMIUM SKINS ENGINE</div>
+            <div class="game-subtitle">FIXED FRUITS & 50 SKINS</div>
             <div style="color: #ffd700; font-size: 18px; margin-bottom: 25px; font-weight: bold;">🪙 Vault: <span id="homeCoins">0</span></div>
             <button class="menu-btn play-btn" id="startMatchBtn">⚔️ START MATCH</button>
             <button class="menu-btn shop-launch-btn" id="openShopBtn">🏯 BOMB VAULT (50 SKINS)</button>
@@ -138,24 +135,24 @@
     let playerWallet = parseInt(localStorage.getItem("s50_wallet")) || 75000; 
     let purchasedBombs = JSON.parse(localStorage.getItem("s50_purchased")) || ["Bomb_0"];
     let equippedBombId = localStorage.getItem("s50_equipped") || "Bomb_0";
-    let selectedPreviewId = equippedBombId;
+    let selectedPreviewId = equippedBombId; 
 
     let score = 0; let lives = 3; let isMatchActive = false;
     let objects = []; let bladeTrail = []; let isSlicing = false;
     let currentX = 0, currentY = 0; let spawnTimer = 0; let previewRotation = 0;
     let shopPreviewAnimId = null; // FIX: Track animation frame for cleanup
 
-    // 🔥 GENERATE 50 EXCLUSIVE UNIQUE VECTOR BOMB SKINS (No Emojis!)
+    // GENERATE 50 EXCLUSIVE UNIQUE VECTOR BOMB SKINS
     const bombSkinsDatabase = [];
     const colorPalettes = [
-        { fill: "#2c3e50", core: "#e74c3c", line: "#f1c40f" },
-        { fill: "#111111", core: "#00ff00", line: "#ffffff" },
-        { fill: "#7f8c8d", core: "#9b59b6", line: "#3498db" },
-        { fill: "#d35400", core: "#f39c12", line: "#fff" },
-        { fill: "#27ae60", core: "#2ecc71", line: "#f1c40f" },
-        { fill: "#8e44ad", core: "#fd79a8", line: "#74b9ff" },
-        { fill: "#ff7675", core: "#d63031", line: "#ffeaa7" },
-        { fill: "#00cec9", core: "#0984e3", line: "#ffffff" }
+        { fill: "#2c3e50", core: "#e74c3c", line: "#f1c40f" }, 
+        { fill: "#111111", core: "#00ff00", line: "#ffffff" }, 
+        { fill: "#7f8c8d", core: "#9b59b6", line: "#3498db" }, 
+        { fill: "#d35400", core: "#f39c12", line: "#fff" },    
+        { fill: "#27ae60", core: "#2ecc71", line: "#f1c40f" }, 
+        { fill: "#8e44ad", core: "#fd79a8", line: "#74b9ff" }, 
+        { fill: "#ff7675", core: "#d63031", line: "#ffeaa7" }, 
+        { fill: "#00cec9", core: "#0984e3", line: "#ffffff" }  
     ];
 
     for (let i = 0; i < 50; i++) {
@@ -172,6 +169,14 @@
         });
     }
 
+    // FRUITS DATA TYPE CONFIGURATION WITH REAL VISUAL DETAILS
+    const fruitTypes = [
+        { name: "Apple", color: "#ff4d4d", innerColor: "#ff7675", leafColor: "#2ed573", type: "apple" },
+        { name: "Orange", color: "#ff9f43", innerColor: "#feca57", leafColor: "#1dd1a1", type: "orange" },
+        { name: "Watermelon", color: "#10ac84", innerColor: "#ee5253", leafColor: "#10ac84", type: "melon" },
+        { name: "Lemon", color: "#fed330", innerColor: "#fff200", leafColor: "#26de81", type: "lemon" }
+    ];
+
     // OPTIMIZATION: Cache current equipped skin
     let cachedEquippedSkin = bombSkinsDatabase[0];
 
@@ -186,13 +191,12 @@
         cachedEquippedSkin = bombSkinsDatabase.find(b => b.id === equippedBombId) || bombSkinsDatabase[0];
     }
 
-    // UTILITY: Draws custom vector bombs (optimized with fewer state changes)
+    // UTILITY: Draws custom vector bombs (optimized)
     function drawVectorBombMesh(context, x, y, radius, angle, skin) {
         context.save();
         context.translate(x, y);
         context.rotate(angle);
 
-        // 1. Draw outer tactical spikes
         context.strokeStyle = skin.lineColor;
         context.lineWidth = 3;
         const spikeRotation = (Math.PI * 2) / skin.spikeCount;
@@ -204,7 +208,6 @@
             context.stroke();
         }
 
-        // 2. Draw Main Outer Shell
         context.beginPath();
         context.arc(0, 0, radius, 0, Math.PI * 2);
         context.fillStyle = skin.fillColor;
@@ -213,22 +216,65 @@
         context.strokeStyle = "#ffffff";
         context.stroke();
 
-        // 3. Draw Inner Power Core
         context.beginPath();
         context.arc(0, 0, skin.ringRadius + 5, 0, Math.PI * 2);
         context.fillStyle = skin.coreColor;
         context.fill();
 
-        // 4. Draw Center Fusion Dot
-        context.beginPath();
-        context.arc(0, 0, 4, 0, Math.PI * 2);
-        context.fillStyle = skin.lineColor;
-        context.fill();
+        context.restore();
+    }
+
+    // DETAILED FRUIT DRAWING FUNCTION (OPTIMIZED)
+    function drawDetailedFruit(context, x, y, radius, fruit) {
+        context.save();
+        context.translate(x, y);
+
+        if (fruit.type === "apple") {
+            context.beginPath();
+            context.arc(-radius/4, 0, radius, 0, Math.PI * 2);
+            context.arc(radius/4, 0, radius, 0, Math.PI * 2);
+            context.fillStyle = fruit.color;
+            context.fill();
+            context.fillStyle = "#8b4513";
+            context.fillRect(-2, -radius - 4, 4, 6);
+            context.beginPath();
+            context.ellipse(4, -radius - 4, 6, 3, Math.PI/4, 0, Math.PI * 2);
+            context.fillStyle = fruit.leafColor;
+            context.fill();
+        } 
+        else if (fruit.type === "orange") {
+            context.beginPath();
+            context.arc(0, 0, radius, 0, Math.PI * 2);
+            context.fillStyle = fruit.color;
+            context.fill();
+            context.lineWidth = 2;
+            context.strokeStyle = fruit.innerColor;
+            context.stroke();
+            context.beginPath();
+            context.arc(0, 0, 3, 0, Math.PI * 2);
+            context.fillStyle = "#fff";
+            context.fill();
+        } 
+        else if (fruit.type === "melon") {
+            context.beginPath();
+            context.arc(0, 0, radius, 0, Math.PI * 2);
+            context.fillStyle = fruit.color;
+            context.fill();
+            context.beginPath();
+            context.arc(0, 0, radius - 5, 0, Math.PI * 2);
+            context.fillStyle = fruit.innerColor;
+            context.fill();
+        } 
+        else if (fruit.type === "lemon") {
+            context.beginPath();
+            context.ellipse(0, 0, radius + 4, radius, 0, 0, Math.PI * 2);
+            context.fillStyle = fruit.color;
+            context.fill();
+        }
 
         context.restore();
     }
 
-    // OPTIMIZATION: Throttle preview updates
     function updateStorePreviewSystem() {
         pCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
         let selectedSkin = bombSkinsDatabase.find(b => b.id === selectedPreviewId);
@@ -290,8 +336,8 @@
         if (playerWallet >= cost) {
             playerWallet -= cost;
             purchasedBombs.push(id);
-            selectedPreviewId = id;
-            updateStorageData();
+            selectedPreviewId = id; 
+            updateStorageData(); 
             buildShopGridDom();
         }
     };
@@ -299,7 +345,7 @@
     window.triggerEquip = function(id) {
         equippedBombId = id;
         selectedPreviewId = id;
-        updateStorageData();
+        updateStorageData(); 
         buildShopGridDom();
     };
 
@@ -326,13 +372,14 @@
                 skinDataConfig: cachedEquippedSkin
             });
         } else {
-            let targetColors = ["#ea2027", "#ffb142", "#10ac84"];
+            let randomFruit = fruitTypes[Math.floor(Math.random() * fruitTypes.length)];
             objects.push({
                 x: startX, y: canvas.height + 30,
                 vx: (startX > canvas.width/2 ? -1.5 : 1.5) * (Math.random() * 1.2 + 0.5),
                 vy: -(Math.random() * 3 + 15),
                 radius: 24, sliced: false, isBomb: false, rotation: 0,
-                rotSpeed: 0.02, color: targetColors[Math.floor(Math.random() * targetColors.length)]
+                rotSpeed: 0.02,
+                fruitData: randomFruit
             });
         }
     }
@@ -342,7 +389,6 @@
         if (!isSlicing || objects.length === 0) return;
         
         const sliceRadius = 18;
-        const hitDistance = sliceRadius * sliceRadius; // Squared distance for faster comparison
         
         for (let i = objects.length - 1; i >= 0; i--) {
             let obj = objects[i];
@@ -371,50 +417,39 @@
         }
     }
 
-    // SYSTEM GAME LOOP (Optimized)
     function runCoreEngineLoop() {
-        ctx.fillStyle = "#1e1918";
+        ctx.fillStyle = "#1e1918"; 
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         if (isMatchActive) {
-            spawnTimer++;
-            if (spawnTimer >= 38) {
-                spawnObject();
-                spawnTimer = 0;
+            spawnTimer++; 
+            if (spawnTimer >= 38) { 
+                spawnObject(); 
+                spawnTimer = 0; 
             }
         }
 
-        // Draw and update simulation entities
         for (let i = objects.length - 1; i >= 0; i--) {
             let obj = objects[i];
-            obj.vy += 0.23;
-            obj.x += obj.vx;
+            obj.vy += 0.23; 
+            obj.x += obj.vx; 
             obj.y += obj.vy;
-            obj.rotation += obj.rotSpeed;
+            if (obj.isBomb) obj.rotation += obj.rotSpeed;
 
             if (!obj.sliced) {
                 if (obj.isBomb) {
                     drawVectorBombMesh(ctx, obj.x, obj.y, obj.radius, obj.rotation, obj.skinDataConfig);
                 } else {
-                    // Fruit Mesh Vector
-                    ctx.beginPath();
-                    ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = obj.color;
-                    ctx.fill();
-                    ctx.lineWidth = 2;
-                    ctx.strokeStyle = "#fff";
-                    ctx.stroke();
+                    drawDetailedFruit(ctx, obj.x, obj.y, obj.radius, obj.fruitData);
                 }
 
-                // FIX: Properly remove objects that fall off screen
                 if (obj.y > canvas.height + 60 && obj.vy > 0) {
                     objects.splice(i, 1);
                     if (isMatchActive && !obj.isBomb) {
                         lives--;
-                        // FIX: Better lives display (no empty state)
                         document.getElementById("livesDisplay").innerText = lives > 0 ? "❤️".repeat(lives) : "NO LIVES";
                         if (lives <= 0) {
-                            isMatchActive = false;
+                            isMatchActive = false; 
                             topDashboard.style.display = "none";
                             document.getElementById("goHeadline").innerText = "MATCH CONCLUDED";
                             document.getElementById("goFinalScore").innerText = score;
@@ -423,40 +458,39 @@
                     }
                 }
             } else {
-                // Sliced Fragment Dispersion Engine
+                // Sliced Fragment Layout
                 ctx.beginPath();
-                ctx.arc(obj.x - 16, obj.y + 5, obj.radius / 1.3, 0, Math.PI * 2);
-                ctx.fillStyle = obj.isBomb ? obj.skinDataConfig.fillColor : obj.color;
-                ctx.fill();
-
-                ctx.beginPath();
-                ctx.arc(obj.x + 16, obj.y - 5, obj.radius / 1.3, 0, Math.PI * 2);
-                ctx.fill();
-
-                if (obj.y > canvas.height + 100) {
-                    objects.splice(i, 1);
+                if (obj.isBomb) {
+                    ctx.arc(obj.x - 16, obj.y, obj.radius / 1.3, 0, Math.PI * 2);
+                    ctx.fillStyle = obj.skinDataConfig.fillColor;
+                } else {
+                    ctx.arc(obj.x - 16, obj.y, obj.radius / 1.3, 0, Math.PI * 2);
+                    ctx.fillStyle = obj.fruitData.color;
                 }
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(obj.x + 16, obj.y, obj.radius / 1.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (obj.y > canvas.height + 100) objects.splice(i, 1);
             }
         }
 
-        // Plasma Tracking Blade Line Render
         if (isSlicing && bladeTrail.length > 1) {
-            ctx.beginPath();
+            ctx.beginPath(); 
             ctx.moveTo(bladeTrail[0].x, bladeTrail[0].y);
-            for (let i = 1; i < bladeTrail.length; i++) {
-                ctx.lineTo(bladeTrail[i].x, bladeTrail[i].y);
-            }
-            ctx.lineCap = "round";
-            ctx.lineJoin = "round";
+            for (let i = 1; i < bladeTrail.length; i++) ctx.lineTo(bladeTrail[i].x, bladeTrail[i].y);
+            ctx.lineCap = "round"; 
+            ctx.lineJoin = "round"; 
             ctx.lineWidth = 7;
-            ctx.strokeStyle = "#00ffff";
+            ctx.strokeStyle = "#00ffff"; 
             ctx.stroke();
         }
 
         requestAnimationFrame(runCoreEngineLoop);
     }
 
-    // Input Coordinate Vector Translation
     function getEventCanvasCoords(e) {
         let box = canvas.getBoundingClientRect();
         let cX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -469,24 +503,23 @@
 
     function initiateSliceAction(e) {
         if (!isMatchActive) return;
-        isSlicing = true;
+        isSlicing = true; 
         let c = getEventCanvasCoords(e);
-        currentX = c.x;
-        currentY = c.y;
+        currentX = c.x; 
+        currentY = c.y; 
         bladeTrail = [{ x: c.x, y: c.y }];
     }
 
     function trackingSliceAction(e) {
         if (!isSlicing || !isMatchActive) return;
         let c = getEventCanvasCoords(e);
-        currentX = c.x;
-        currentY = c.y;
+        currentX = c.x; 
+        currentY = c.y; 
         bladeTrail.push({ x: c.x, y: c.y });
         if (bladeTrail.length > 7) bladeTrail.shift();
         checkSlices();
     }
 
-    // FIX: Use non-passive listeners to prevent scroll issues
     window.addEventListener("mousedown", initiateSliceAction);
     window.addEventListener("mousemove", trackingSliceAction);
     window.addEventListener("mouseup", () => { isSlicing = false; bladeTrail = []; });
@@ -494,17 +527,16 @@
     window.addEventListener("touchmove", trackingSliceAction, false);
     window.addEventListener("touchend", () => { isSlicing = false; bladeTrail = []; });
 
-    // Open Shop UI
     document.getElementById("openShopBtn").addEventListener("click", () => {
         shopOverlay.style.display = "flex";
-        selectedPreviewId = equippedBombId;
+        selectedPreviewId = equippedBombId; 
         buildShopGridDom();
         updateStorePreviewSystem();
     });
 
     // FIX: Properly cleanup animation when shop closes
-    document.getElementById("closeShopBtn").addEventListener("click", () => {
-        shopOverlay.style.display = "none";
+    document.getElementById("closeShopBtn").addEventListener("click", () => { 
+        shopOverlay.style.display = "none"; 
         if (shopPreviewAnimId) {
             cancelAnimationFrame(shopPreviewAnimId);
             shopPreviewAnimId = null;
@@ -513,12 +545,8 @@
 
     document.getElementById("startMatchBtn").addEventListener("click", startMatch);
     document.getElementById("replayMatchBtn").addEventListener("click", startMatch);
-    document.getElementById("exitToHomeBtn").addEventListener("click", () => {
-        gameOverScreen.style.display = "none";
-        homePageScreen.style.display = "flex";
-    });
+    document.getElementById("exitToHomeBtn").addEventListener("click", () => { gameOverScreen.style.display = "none"; homePageScreen.style.display = "flex"; });
 
-    // Startup Init
     updateStorageData();
     runCoreEngineLoop();
 </script>
